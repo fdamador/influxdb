@@ -9,17 +9,19 @@ import (
 
 // DBRPMappingServiceV2 provides CRUD to DBRPMappingV2s.
 type DBRPMappingServiceV2 interface {
-	// FindBy returns the dbrp mapping for the specified IDs.
-	FindByID(ctx context.Context, id ID) (*DBRPMappingV2, error)
+	// FindBy returns the dbrp mapping for the specified ID.
+	// Requires orgID because every resource will be org-scoped.
+	FindByID(ctx context.Context, orgID, id ID) (*DBRPMappingV2, error)
 	// FindMany returns a list of dbrp mappings that match filter and the total count of matching dbrp mappings.
-	FindMany(context.Context, DBRPMappingFilterV2, ...FindOptions) ([]*DBRPMappingV2, int, error)
+	FindMany(ctx context.Context, dbrp DBRPMappingFilterV2, opts ...FindOptions) ([]*DBRPMappingV2, int, error)
 	// Create creates a new dbrp mapping, if a different mapping exists an error is returned.
-	Create(context.Context, *DBRPMappingV2) error
+	Create(ctx context.Context, dbrp *DBRPMappingV2) error
 	// Update a new dbrp mapping
-	Update(context.Context, *DBRPMappingV2) error
+	Update(ctx context.Context, dbrp *DBRPMappingV2) error
 	// Delete removes a dbrp mapping.
 	// Deleting a mapping that does not exists is not an error.
-	Delete(ctx context.Context, id ID) error
+	// Requires orgID because every resource will be org-scoped.
+	Delete(ctx context.Context, orgID, id ID) error
 }
 
 // DBRPMappingV2 represents a mapping of a database and retention policy to an organization ID and bucket ID.
@@ -85,7 +87,7 @@ func (m *DBRPMappingV2) Equal(o *DBRPMappingV2) bool {
 		m.BucketID == o.BucketID
 }
 
-// DBRPMappingFilter represents a set of filters that restrict the returned results by cluster, database and retention policy.
+// DBRPMappingFilterV2 represents a set of filters that restrict the returned results.
 type DBRPMappingFilterV2 struct {
 	ID       *ID
 	OrgID    *ID
@@ -175,6 +177,12 @@ type DBRPMapping struct {
 
 // Validate reports any validation errors for the mapping.
 func (m DBRPMapping) Validate() error {
+	if !validName(m.Cluster) {
+		return &Error{
+			Code: EInvalid,
+			Msg:  "cluster must contain at least one character and only be letters, numbers, '_', '-', and '.'",
+		}
+	}
 	if !validName(m.Database) {
 		return &Error{
 			Code: EInvalid,
@@ -241,7 +249,6 @@ type DBRPMappingFilter struct {
 	Database        *string
 	RetentionPolicy *string
 	Default         *bool
-	OrgID           *ID
 }
 
 func (f DBRPMappingFilter) String() string {
