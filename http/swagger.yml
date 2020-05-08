@@ -436,7 +436,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-  '/dprps/{dprpID}':
+  '/dprps/{dbrpID}':
     get:
       operationId: GetDBRPsID
       tags:
